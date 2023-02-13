@@ -1,0 +1,4 @@
+[gd_scene format=2]
+
+[node name="End" type="Control"]
+margin_right = 475.0

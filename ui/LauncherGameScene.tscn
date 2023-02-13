@@ -1,0 +1,623 @@
+[gd_scene load_steps=18 format=2]
+
+[ext_resource path="res://ui/Theme/CubePanel_RightLeft_Up.tres" type="Theme" id=1]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=2]
+[ext_resource path="res://ui/font/VKSansDisplay-Regular.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://ui/font/VKSansDisplay-Bold.ttf" type="DynamicFontData" id=4]
+[ext_resource path="res://ui/font/VKSansDisplay-DemiBold.ttf" type="DynamicFontData" id=5]
+[ext_resource path="res://ui/Component/BackgroundScene.tscn" type="PackedScene" id=6]
+[ext_resource path="res://ui/Theme/ButtomTheme_RightDown.tres" type="Theme" id=7]
+
+[sub_resource type="GDScript" id=24]
+script/source = "extends Control
+
+var GameData
+const debug = true
+var version_tag
+
+func _ready():
+	#В начале отключаем показатели установок
+	Progress.hide()
+	DownloadInfo.hide()
+	
+	un_button.disabled = true
+	$UI.hide()
+	var head = [\"User-Agent:Firefox/1.0\"]
+	
+	#Функция проверки файла с играми (Если нету создать)
+	if !Fs.dir_exists('user://'+G.AllGamesPath):
+		Fs.save_dir_data('Games')
+	else:
+		if debug:
+			print_debug('Папка есть')
+	
+	#Запрос на получение информации об игре
+	var q = \"ApiGet=GameInfo&id=\"+str(G.GameIdTmp)
+	$HTTPRequest.request(\"https://web1182.craft-host.ru/kikgames/kikgameslauncher/api.php?\"+q,head,false)
+	
+	#Запрос о получении фоток игры
+	q = \"ApiGet=GamePhoto&id=\"+str(G.GameIdTmp)
+	$HTTPRequestPhoto.request(\"https://web1182.craft-host.ru/kikgames/kikgameslauncher/api.php?\"+q,head,false)
+	
+func _process(_delta):
+	if load_file:
+		var byt = str(http_request.get_downloaded_bytes()).humanize_size(http_request.get_downloaded_bytes())
+		if FullGame != 3:
+			Progress.text = byt+' / '+load_size
+		else:
+			Progress.text = byt
+
+func _on_Exit_pressed():
+	exit_scene()
+
+# Функция чтобы выйти из сцены со страницой игры
+func exit_scene():
+	if !G.SettingsDataInterface['UsePersonalColor']:
+		G.BackGroundScene._ready()
+	queue_free()
+	ready_game = 0
+
+#Запрос всех данных
+func _on_HTTPRequest_request_completed(result, response_code, headers, body):
+	if result == HTTPRequest.RESULT_SUCCESS:
+		if response_code == 200:
+			#Получаем данные во временную переменную
+			var data = body.get_string_from_utf8()
+			to_json(data) #Переводим данные в json
+			var pars_json = JSON.parse(data) #Парсим json
+			if pars_json.error != OK: #Если есть какая то ошибка то пишем
+				G.CallAlert('Ошибка JSON_PARSER, возможно есть какие то проблемы с API KIK Games Launcher, напишите разработчику')
+				exit_scene()
+			var main_data = pars_json.result #Результат выводим во временную переменую
+				
+			#Данные из временной переменой заносим в основные переменные глобального скрипта
+			GameData = main_data
+				
+			GameNameNSpace = GameData[0]['GameName'] #Название игры без пробелов
+			GameNameNSpace = GameNameNSpace.replace(\" \",\"\")	
+				
+			version_tag = 'version_'+GameData[0]['GameName']+'.txt'	
+				
+			# ВАЖНО!
+			# 1 - самая игры .exe / 2 - лаунчер/установщик / 3 - скачивание из облака / 4 - сайт
+			FullGame = int(GameData[0]['FullGame']) # Переменная с типом игры (Важная)	
+				
+			#Проверка есть ли папка с игрой (Если нет то делаем)
+			if !Fs.file_exists('user://'+G.AllGamesPath+'/'+GameNameNSpace+'/'+version_tag.replace(\" \",\"\")) && FullGame != 4:
+				Fs.save_dir_from_data(GameNameNSpace,G.AllGamesPath)
+				if debug:
+					print_debug('Папка создалась')
+			game_path = \"user://\"+G.AllGamesPath+'/'+GameNameNSpace+'/'+GameData[0]['DownloadLinkLaunher']	
+			
+			#Устанавливаем путь к папке и название версии игры (По названию игры)
+			version_path = 'user://'+G.AllGamesPath+'/'+GameNameNSpace+'/version_'+GameData[0]['GameName']+\".txt\"
+			version_path = version_path.replace(\" \",\"\") #Тут мы убираем ВСЕ пробелы если они есть в названии игры
+				
+				
+			#=== Устанавливаем весь текст UI ===
+			$UI/TitleBox/Title.text = GameData[0]['GameName']
+			var bbcode_text = GameData[0]['GameDesc']+'\\n'+'\\n'+'[b]'+GameData[0]['Gametitle']+'[/b]'+'\\n\\n'+GameData[0]['GameDesc2']
+			$UI/AboutGame/Desc.bbcode_text = bbcode_text.replace(\"<br>\", \"\")
+			$UI/TitleBox/Dev.text = 'Разработчик: '+GameData[0]['GameDev']
+			$UI/TitleBox/TypeBox/Type.text = GameData[0]['GameType']
+			$UI/TitleBox/Version.text = 'Версия игры: '+GameData[0]['GameVersion']
+			#=== Конец ===
+			
+			#Устанавливаем цвет градиента если игрок это не выключил в настройках
+			if !G.SettingsDataInterface['UsePersonalColor'] and GameData[0]['GradientBackground'] != '':
+				G.BackGroundScene.ChangeGradient(Color(GameData[0]['GradientBackground']))
+			
+			#=== Устанавливаем важные значения переменным для скачивания игры ===
+			
+			# Проверяем если тип игры 3 (Своя ссылка на файл, не с хостинга)
+			# то устанавливаем только ссылку в ссылку для установки игры
+			if FullGame == 3: # Если игра загружена с друого сайта
+				game_link = GameData[0]['FileName']
+			else: # Если нет то собираем ссылку из полученных данных DownloadLinkLaunher - название .exe файла игры FileName - папки где этот .exe
+				game_link = 'https://web1182.craft-host.ru/kikgames/games/'+GameData[0]['FileName']+'/'+GameData[0]['DownloadLinkLaunher']
+				
+			# Если в бд нету что-то то мы закрываем доступ скачивать и запускать игру
+			if GameData[0]['DownloadLinkLaunher'] == 'null' && FullGame != 4 && GameData[0]['FileName'] == 'null':#null потом поменять в бд
+				button.disabled = true
+				button.text = 'Игра недоступна'
+				print('Игра недоступна')
+			else:
+				_pre_verify_gamefiles()
+			
+			#Проверка и установки отключения или включения кнопку \"Удалить игру\"
+			if ready_game == 1 && FullGame != 4:
+				un_button.disabled = false
+			else:
+				un_button.disabled = true
+			$UI.show()
+			
+			#=== Конец установки важных переменных ===
+			
+			
+			#Отображаем все переменные которые нужны если debug = true
+			if debug:
+				print_debug('GameDataArray: '+ str(GameData))
+				print('======')
+				print_debug('user://'+G.AllGamesPath+'/'+GameNameNSpace+'/'+version_tag.replace(\" \",\"\"))
+				print('======')
+				print_debug('DownloadLinkLaunher: '+GameData[0]['DownloadLinkLaunher'])
+				print('======')
+				print_debug('FileName: '+GameData[0]['FileName'])
+				print('======')
+				print_debug('Game_link: '+game_link)
+				print('======')
+				print_debug('Game_path: '+game_path)
+		
+		
+	# Если есть какие то ошибки то мы отправялем уведомление	
+	else:
+		G.CallAlert('Ошибка HTTP запроса, проверьте интернет и сосотояние серверов KRIpto')
+		exit_scene()
+#Фотки
+func _on_HTTPRequestPhoto_request_completed(result, response_code, headers, body):
+	if result == HTTPRequest.RESULT_SUCCESS:
+		if response_code == 200:
+			#Получаем данные во временную переменную
+			var data = body.get_string_from_utf8()
+			to_json(data) #Переводим данные в json
+			var pars_json = JSON.parse(data) #Парсим json
+			if pars_json.error != OK: #Если есть какая то ошибка то пишем
+				print('ERROR')
+				return
+			var main_data = pars_json.result #Результат выводим во временную переменую
+				
+			#Данные из временной переменой заносим в основные переменные глобального скрипта
+			var GamePhoto = main_data
+			
+			for i in GamePhoto.size():
+				var PhotoBlock = preload(\"res://ui/Component/PhotoBox.tscn\").instance()
+				
+				PhotoBlock.get_node(\"Photo\")._setTextureUrl('https://web1182.craft-host.ru/kikgames/'+GamePhoto[i]['photo'])
+				#PhotoBlock.get_node(\"Count\").text = str(i) Прикольное отображение в углу фотки её номер, но пока что выключу
+				$UI/PhotoPanel/ScrollContainer/in.add_child(PhotoBlock)
+				
+			var PhotoBlockEmpty = preload(\"res://ui/Component/PhotoBox.tscn\").instance()
+			$UI/PhotoPanel/ScrollContainer/in.add_child(PhotoBlockEmpty)
+
+
+
+
+#Основные скрипты и функции скачивания игры
+#=========================================
+onready var button = $UI/TitleBox/Download
+onready var un_button = $UI/TitleBox/Uninstall
+onready var Progress = $UI/TitleBox/Download/DownloadCount
+onready var DownloadInfo = $UI/TitleBox/DownloadInfo
+var game_link # ссылка на игру .exe
+var game_path # ссылка в папке на игру .exe
+
+var GameNameNSpace
+
+var version_path # ссылка в папке на .txt файл версии
+
+var http_request: HTTPRequest
+
+var file = File.new()
+var dir = Directory.new()
+
+var load_file = false # Загружается ли файл или нет (Если да то будет выведен прогресс бар)
+var load_size = '0' # Размер файла для прогресс бара
+var ready_game = 0 # 0 - установка / 1 - играть
+
+var FullGame # Переменная с определением какая типом игра 1игра/2лаунчер/с другой ссылки3/4сайт
+
+#Запуск игры
+func _on_Download_pressed():
+	if ready_game == 1: # Если ready_game == 1 то запускаем игру
+		_start_game()
+		print('StartGame')
+	else: # или проверяем файлы и качаем их
+		_verify_gamefiles() 
+		print('DownloadGame')
+
+# Функция вертификации игровых файлов, проверят что за тип игры и скачена ли она вообще
+func _verify_gamefiles():
+	un_button.disabled = true
+	# Если тип игры не = 4 (то есть не сайтовая версия игры) то мы проверяем есть ли файлы игры
+	# Если есть то мы проверяем наличие обновлений, если файлов игры нет то качаем игру
+	# С сайтовой версией игры мы отключаем кнопку \"Удалить игру\"
+	if FullGame != 4:
+		if Fs.file_exists(game_path) && Fs.file_exists(version_path):
+			button.disabled = true
+			button.text = 'Проверка обновлений'
+			un_button.disabled = true
+			yield(get_tree().create_timer(1.0), \"timeout\")
+			_compare_version()
+		else:
+			_cheak_integrity()
+	else:
+		button.disabled = false
+		un_button.disabled = true
+
+# Функция пре вертификации игровых файлов
+# Всё так же как и в функции _verify_gamefiles
+# только это нужно для управления UI лаунчера (отключить/включить кнопку)
+func _pre_verify_gamefiles():
+	# Игра скачена и всё готово
+	if Fs.file_exists(game_path) && Fs.file_exists(version_path) and FullGame != 4:
+		ready_game = 1
+		button.text = 'Играть'
+		un_button.disabled = false
+		print('Готов к игре')
+		_verify_gamefiles()
+	# Сайтовая версия
+	elif FullGame == 4:
+		ready_game = 1
+		button.text = 'Играть на сайте'
+		un_button.disabled = true
+		print('Готов к игре на сайте')
+	# Если игра вообще не скачена
+	else:
+		ready_game = 0
+		button.text = 'Скачать игру'
+		button.disabled = false
+		un_button.disabled = true
+		print('Скачать игру')
+
+func _download_file(link: String, path: String, just_version: bool):
+	set_process(true)
+	un_button.disabled = true
+	#Создаём http запрос ноды и конектим
+	Progress.show()
+	DownloadInfo.show()
+	http_request = HTTPRequest.new()
+	http_request.use_threads = true
+	add_child(http_request)
+	if FullGame != 3:
+		DownloadInfo.text = \"Скачивание \"+ str(path.get_file())
+	else:
+		DownloadInfo.text = \"Скачивание \"+ str(path.get_file())+\" (С другого сервера)\"
+	http_request.connect(\"request_completed\", self, \"_install_file\", [path])
+	load_file = true
+	#Если ошибки
+	var error = http_request.request_raw(link)
+	if error != OK:
+		DownloadInfo.text = 'Ошибка загрузки ' + str(error)
+		set_process(false)
+		button.disabled = true
+		
+#Если всё успешно скачалось
+func _install_file(_result, _response_code, _headers, body, path):
+	dir.remove(path) # В начале удаляем файл чтобы скачать новый
+	
+	file.open(path, File.WRITE)
+	file.store_buffer(body)
+	file.close()
+	_cheak_integrity()
+	
+func _cheak_integrity():
+	button.disabled = true
+
+	# Если нет версии то записываем данные новой версией и качаем новый файл игры
+	if !Fs.file_exists(version_path):
+		if !Fs.file_exists('user://'+G.AllGamesPath+'/'+GameNameNSpace+'/'+version_tag.replace(\" \",\"\")):
+			Fs.save_string_from_data(version_tag.replace(\" \",\"\"),G.AllGamesPath+'/'+GameNameNSpace,GameData[0]['GameVersion'])
+		else:
+			Fs.save_dir_from_data(GameNameNSpace,G.AllGamesPath)
+			Fs.save_string_from_data(version_tag.replace(\" \",\"\"),G.AllGamesPath+'/'+GameNameNSpace,GameData[0]['GameVersion'])
+		dir.remove(game_path)
+		_download_file(game_link,game_path, false)
+		load_size = GameData[0]['GameSize']
+		print('Установка обновления')
+		return
+	
+	if !Fs.file_exists(game_path):
+		_download_file(game_link,game_path, false)
+		print('Отсутствует EXE скачивание...')
+		load_size = GameData[0]['GameSize']
+		return
+	
+	button.text = 'Играть'
+	button.disabled = false
+	un_button.disabled = false
+	
+	
+	load_file = false
+
+	Progress.hide()
+	DownloadInfo.hide()
+	
+	ready_game = 1
+	set_process(false)
+	G.CallAlert('Игра готова к запуску')
+	
+	
+func _compare_version():
+	file.open(version_path, File.READ)
+	var cur_version = file.get_as_text()
+	file.close()
+	if debug:
+		print('New_version: '+GameData[0]['GameVersion'])
+		print('Cur_version: '+cur_version)
+	if GameData[0]['GameVersion'] != cur_version:
+		dir.remove(version_path)
+		print('Обновление +')
+		G.CallAlert('Доступно новое обновление ' + GameData[0]['GameVersion'])
+	else:
+		print('Обновление -')
+	_cheak_integrity()
+	
+#Старт игры
+func _start_game():
+	# Запускаем игру из папки игры, если игра не установщик то увдомление об этом не отправляем
+	if FullGame != 4:
+		if FullGame == 2:
+			G.CallAlert('Внимание! Это установщик игры, а не сама игра, после установки игры запуск осуществляйте через ярлык')
+		OS.shell_open(OS.get_user_data_dir() + '/' + G.AllGamesPath +\"/\"+GameNameNSpace+'/'+GameData[0]['DownloadLinkLaunher'])
+		print(OS.get_user_data_dir() + '/' + G.AllGamesPath +\"/\"+GameNameNSpace+'/'+GameData[0]['DownloadLinkLaunher'])
+		print('start 1/2/3')
+		#G.quit()
+	else:
+		OS.shell_open(GameData[0]['DownloadLink'])
+		print('start 4')
+		#G.quit()
+
+
+func _on_Uninstall_pressed():
+	unistall_game()
+	
+func unistall_game():
+	button.disabled = true
+	un_button.text = 'Удаление игры'
+	
+	button.text = 'Скачать игру'
+	un_button.text = 'Удалить игру'
+	button.disabled = false
+	un_button.disabled = true
+	ready_game = 0
+	G.CallAlert('Игра успешно удалена')
+	
+	dir.remove(version_path)
+	dir.remove(game_path)
+	dir.remove(OS.get_user_data_dir() + '/' + G.AllGamesPath +\"/\"+GameNameNSpace)
+
+
+"
+
+[sub_resource type="DynamicFont" id=1]
+size = 35
+font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=3]
+size = 24
+font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=25]
+outline_size = 1
+outline_color = Color( 1, 1, 1, 0.156863 )
+use_mipmaps = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=4]
+size = 32
+font_data = ExtResource( 5 )
+
+[sub_resource type="Theme" id=13]
+GridContainer/constants/vseparation = 280
+VBoxContainer/constants/separation = 280
+
+[sub_resource type="GDScript" id=27]
+script/source = "extends Control
+
+
+func _on_Desc_meta_clicked(meta):
+	OS.shell_open(str(meta))
+"
+
+[sub_resource type="DynamicFont" id=5]
+size = 32
+font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=26]
+size = 24
+font_data = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=6]
+size = 18
+font_data = ExtResource( 3 )
+
+[node name="GameScene" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource( 2 )
+script = SubResource( 24 )
+
+[node name="BackGroundScene" parent="." instance=ExtResource( 6 )]
+
+[node name="UI" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="TitleBox" type="Panel" parent="UI"]
+margin_left = 37.0
+margin_top = 60.0
+margin_right = 640.0
+margin_bottom = 387.0
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Decor" type="ColorRect" parent="UI/TitleBox"]
+margin_left = -4.0
+margin_right = 1.0
+margin_bottom = 81.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Decor2" type="ColorRect" parent="UI/TitleBox"]
+margin_left = -4.0
+margin_top = 90.0
+margin_right = 1.0
+margin_bottom = 171.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Title" type="Label" parent="UI/TitleBox"]
+margin_left = 27.0
+margin_top = 27.0
+margin_right = 563.0
+margin_bottom = 71.0
+custom_fonts/font = SubResource( 1 )
+text = "Название игры"
+autowrap = true
+
+[node name="Download" type="Button" parent="UI/TitleBox"]
+margin_left = 27.0
+margin_top = 174.0
+margin_right = 302.0
+margin_bottom = 224.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 7 )
+custom_fonts/font = SubResource( 3 )
+text = "Скачать"
+
+[node name="DownloadCount" type="Label" parent="UI/TitleBox/Download"]
+margin_left = 285.0
+margin_right = 470.0
+margin_bottom = 49.0
+text = "0 B / 0 MiB"
+valign = 1
+autowrap = true
+
+[node name="Uninstall" type="Button" parent="UI/TitleBox"]
+margin_left = 184.0
+margin_top = 263.0
+margin_right = 304.0
+margin_bottom = 300.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 7 )
+text = "Удалить игру"
+
+[node name="Exit" type="Button" parent="UI/TitleBox"]
+margin_left = 27.0
+margin_top = 263.0
+margin_right = 147.0
+margin_bottom = 300.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 7 )
+text = "Выйти"
+
+[node name="Dev" type="Label" parent="UI/TitleBox"]
+margin_left = 27.0
+margin_top = 79.0
+margin_right = 270.0
+margin_bottom = 99.0
+text = "Разработчик: -"
+autowrap = true
+
+[node name="TypeBox" type="Panel" parent="UI/TitleBox"]
+margin_left = 27.0
+margin_top = 122.0
+margin_right = 75.0
+margin_bottom = 145.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Type" type="Label" parent="UI/TitleBox/TypeBox"]
+margin_right = 39.0
+margin_bottom = 23.0
+size_flags_horizontal = 3
+size_flags_vertical = 7
+custom_fonts/font = SubResource( 25 )
+text = "PC"
+align = 1
+valign = 1
+
+[node name="Version" type="Label" parent="UI/TitleBox"]
+margin_left = 98.0
+margin_top = 122.0
+margin_right = 228.0
+margin_bottom = 145.0
+text = "Версия: -"
+valign = 1
+
+[node name="DownloadInfo" type="Label" parent="UI/TitleBox"]
+margin_left = 14.0
+margin_top = 232.0
+margin_right = 312.0
+margin_bottom = 252.0
+text = "Скачивание TheGame.exe"
+align = 1
+valign = 1
+
+[node name="PhotoPanel" type="Panel" parent="UI"]
+margin_left = 683.0
+margin_top = 60.0
+margin_right = 1242.0
+margin_bottom = 689.0
+theme = ExtResource( 1 )
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Title" type="Label" parent="UI/PhotoPanel"]
+margin_left = 19.0
+margin_top = 12.0
+margin_right = 348.0
+margin_bottom = 52.0
+custom_fonts/font = SubResource( 4 )
+text = "Скриншоты из игры"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/PhotoPanel"]
+margin_left = 17.0
+margin_top = 61.0
+margin_right = 545.0
+margin_bottom = 616.0
+rect_min_size = Vector2( 500, 500 )
+size_flags_horizontal = 15
+size_flags_vertical = 15
+
+[node name="in" type="VBoxContainer" parent="UI/PhotoPanel/ScrollContainer"]
+margin_right = 528.0
+margin_bottom = 555.0
+size_flags_horizontal = 15
+size_flags_vertical = 15
+theme = SubResource( 13 )
+
+[node name="AboutGame" type="Control" parent="UI"]
+margin_right = 40.0
+margin_bottom = 40.0
+script = SubResource( 27 )
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Title" type="Label" parent="UI/AboutGame"]
+margin_left = 40.0
+margin_top = 392.0
+margin_right = 294.0
+margin_bottom = 432.0
+custom_fonts/font = SubResource( 5 )
+text = "Описание игры:"
+
+[node name="Desc" type="RichTextLabel" parent="UI/AboutGame"]
+margin_left = 40.0
+margin_top = 431.0
+margin_right = 640.0
+margin_bottom = 689.0
+custom_fonts/bold_font = SubResource( 26 )
+custom_fonts/normal_font = SubResource( 6 )
+bbcode_enabled = true
+bbcode_text = "[b]1`23[/b]"
+text = "1`23"
+
+[node name="HTTPRequest" type="HTTPRequest" parent="."]
+use_threads = true
+timeout = 2.0
+
+[node name="HTTPRequestPhoto" type="HTTPRequest" parent="."]
+use_threads = true
+timeout = 2.0
+
+[connection signal="pressed" from="UI/TitleBox/Download" to="." method="_on_Download_pressed"]
+[connection signal="pressed" from="UI/TitleBox/Uninstall" to="." method="_on_Uninstall_pressed"]
+[connection signal="pressed" from="UI/TitleBox/Exit" to="." method="_on_Exit_pressed"]
+[connection signal="meta_clicked" from="UI/AboutGame/Desc" to="UI/AboutGame" method="_on_Desc_meta_clicked"]
+[connection signal="request_completed" from="HTTPRequest" to="." method="_on_HTTPRequest_request_completed"]
+[connection signal="request_completed" from="HTTPRequestPhoto" to="." method="_on_HTTPRequestPhoto_request_completed"]

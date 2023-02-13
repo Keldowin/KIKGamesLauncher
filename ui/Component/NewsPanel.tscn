@@ -1,0 +1,160 @@
+[gd_scene load_steps=17 format=2]
+
+[ext_resource path="res://ui/Theme/CubePanel_LeftUp.tres" type="Theme" id=1]
+[ext_resource path="res://ui/Theme/CubePanel_None.tres" type="Theme" id=2]
+[ext_resource path="res://ui/font/VKSansDisplay-DemiBold.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://ui/font/VKSansDisplay-Regular.ttf" type="DynamicFontData" id=4]
+[ext_resource path="res://ui/shaders/InvertColor.tres" type="Shader" id=5]
+[ext_resource path="res://ui/img/INXTByE5QTqo-TJNaSVS4w.jpeg" type="Texture" id=6]
+[ext_resource path="res://addons/textureRectUrl/node_textureRectUrl.gd" type="Script" id=7]
+[ext_resource path="res://ui/icons/file_48px.png" type="Texture" id=8]
+[ext_resource path="res://ui/icons/barcode_64px.png" type="Texture" id=9]
+
+[sub_resource type="GDScript" id=8]
+script/source = "extends Panel
+
+
+export(String) var NewsTitle = ''
+export(String) var NewsText = ''
+
+
+func _on_MainBlock_gui_input(e):
+	if e is InputEventMouseButton:
+		if e.pressed:
+			if e.button_index == BUTTON_LEFT:
+				G.NewsScene.OpenNews(NewsTitle,NewsText)
+"
+
+[sub_resource type="ShaderMaterial" id=10]
+shader = ExtResource( 5 )
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=5]
+size = 10
+use_filter = true
+extra_spacing_space = 2
+font_data = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=6]
+size = 20
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="DynamicFont" id=7]
+use_filter = true
+font_data = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=9]
+size = 8
+use_filter = true
+font_data = ExtResource( 4 )
+
+[node name="NewsPanel" type="Control"]
+margin_right = 475.0
+
+[node name="MainBlock" type="Panel" parent="."]
+margin_top = 12.0
+margin_right = 463.0
+margin_bottom = 240.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 1 )
+script = SubResource( 8 )
+
+[node name="DecorBlock" type="ColorRect" parent="MainBlock"]
+margin_left = 252.0
+margin_top = -12.0
+margin_right = 463.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Icon" type="TextureRect" parent="MainBlock/DecorBlock"]
+material = SubResource( 10 )
+margin_left = 2.0
+margin_top = 2.0
+margin_right = 11.0
+margin_bottom = 11.0
+texture = ExtResource( 8 )
+expand = true
+
+[node name="Date" type="Label" parent="MainBlock/DecorBlock"]
+material = SubResource( 4 )
+margin_left = 2.0
+margin_top = -1.0
+margin_right = 208.0
+margin_bottom = 14.0
+custom_fonts/font = SubResource( 5 )
+text = "00:00 - 13.01.2077 - Тег новости"
+align = 2
+valign = 1
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="NewsTitle" type="Label" parent="MainBlock"]
+margin_left = 15.0
+margin_top = 22.0
+margin_right = 217.0
+margin_bottom = 114.0
+custom_fonts/font = SubResource( 6 )
+text = "Название заголовка новости :)"
+autowrap = true
+
+[node name="DecorBlock2" type="ColorRect" parent="MainBlock"]
+margin_top = 123.0
+margin_right = 231.0
+margin_bottom = 125.0
+theme = ExtResource( 2 )
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="NewsDesc" type="Label" parent="MainBlock/DecorBlock2"]
+margin_left = 15.0
+margin_top = 4.0
+margin_right = 217.0
+margin_bottom = 87.0
+custom_fonts/font = SubResource( 7 )
+text = "Описание новости :)"
+
+[node name="Photo" type="TextureRect" parent="MainBlock"]
+show_behind_parent = true
+margin_left = 232.0
+margin_top = 1.0
+margin_right = 463.0
+margin_bottom = 227.0
+texture = ExtResource( 6 )
+expand = true
+script = ExtResource( 7 )
+preloadImage = false
+progressbar = false
+
+[node name="Decor" type="ColorRect" parent="MainBlock"]
+margin_left = 230.0
+margin_top = 1.0
+margin_right = 232.0
+margin_bottom = 228.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="DecorPanel" type="Panel" parent="MainBlock"]
+margin_top = 214.0
+margin_right = 188.0
+margin_bottom = 228.0
+theme = ExtResource( 2 )
+
+[node name="Code" type="Label" parent="MainBlock/DecorPanel"]
+margin_left = 42.0
+margin_top = 2.0
+margin_right = 174.0
+margin_bottom = 13.0
+custom_fonts/font = SubResource( 9 )
+text = "KIK_Games_News 1.0 :\\\\ KRI_0910"
+align = 1
+
+[node name="Barcod" type="TextureRect" parent="MainBlock/DecorPanel"]
+margin_left = 3.0
+margin_top = 1.0
+margin_right = 43.0
+margin_bottom = 13.0
+texture = ExtResource( 9 )
+expand = true
+
+[connection signal="gui_input" from="MainBlock" to="MainBlock" method="_on_MainBlock_gui_input"]

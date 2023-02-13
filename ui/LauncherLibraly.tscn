@@ -1,0 +1,214 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://ui/Theme/CubePanel_RightLeft_Up.tres" type="Theme" id=1]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=2]
+[ext_resource path="res://ui/font/VKSansDisplay-Regular.ttf" type="DynamicFontData" id=3]
+
+[sub_resource type="GDScript" id=2]
+script/source = "extends Control
+
+const Debug = false #Включить откладку
+var re = RegEx.new()
+
+func _ready():
+	if !Debug:
+		G.MainScene.SetBlockLable('Оффлайн библиотека')
+	load_libraly()
+	G.GameLibraly = self
+	if Debug:
+		load_libraly()
+
+func load_libraly():
+	clear_libraly() #Перед началом мы очищаем всю страницу чтобы небыло дублекатов
+	var GameDirs = Fs.list_files_in_directory(OS.get_user_data_dir() + '/' + G.AllGamesPath) #Перебераем папку с играми
+	if Debug:
+		print(GameDirs)
+	
+	#Берём количество папок с играми и перебераем их
+	for i in GameDirs.size():
+		var CurrentGameDir = Fs.list_files_in_directory(OS.get_user_data_dir() + '/' + G.AllGamesPath + '/' + GameDirs[i]) #Перебираем каждую папку игры
+		
+		#Сортируем массив чтобы 1 значение было точно .exe, второе .txt, и последнее .time и ничто больше
+		var CurrentGameDirNew = ['','',''] #Новый массив
+		for j in CurrentGameDir.size():
+			if '.exe' in CurrentGameDir[j]:
+				CurrentGameDirNew[0] = CurrentGameDir[j]
+			elif '.txt' in CurrentGameDir[j]:
+				CurrentGameDirNew[1] = CurrentGameDir[j]	
+			elif '.time' in CurrentGameDir[j]:
+				CurrentGameDirNew[2] = CurrentGameDir[j]
+		#Конец сортировки массива
+		
+		#Проверяем если массив пустой, или в нём меньше чем 2 элемента то не добавялем его
+		#Если всё ок то устанавливаем параметры для GamePanel.tscn и добавляем её в панель
+		if !CurrentGameDirNew.empty() and CurrentGameDir.size() >= 2:
+			var GamePanel = preload(\"res://ui/Component/GamePanel.tscn\").instance()
+			
+			var MainPath = OS.get_user_data_dir() + '/' + G.AllGamesPath + '/' + GameDirs[i] + '/' #Путь к игре
+
+			GamePanel.GameExePath = MainPath + CurrentGameDirNew[0]
+			GamePanel.GamePath = OS.get_user_data_dir() + '/' + G.AllGamesPath + '/' + GameDirs[i]
+			GamePanel.version_path = MainPath + CurrentGameDirNew[1]
+			GamePanel.GameArray = GameDirs[i]
+			GamePanel.GameExeTitle = CurrentGameDirNew[0].replace(\".exe\", \"\") #Убираем .exe
+			
+			#Регулярное выражение добавляет пробелы в названии игры
+			re.compile('(\\\\p{Ll})(\\\\p{Lu})')
+			var GameTitle = re.sub(GameDirs[i], '$1 $2', true) #Заносим конечные данные в переменную
+			
+			#Устанавлеваем данные названия игры и потом заносим в её переменную для дольнейших действий
+			if int(GameTitle.length()) > 48: #Если название игры больше 48 символов то обрезаем до 28 и ставим в конце ...
+				GameTitle = GameTitle.substr(0, 28) + '...'
+			GamePanel.get_node('MainBlock/GameTitle').text = GameTitle
+			GamePanel.GameTitle = GameTitle
+			
+			
+			# Скрипт чтения/записи сколько игрок наиграл времени
+			if !Fs.file_exists(MainPath + CurrentGameDirNew[2]): #Проверяем существует ли запись об активности в игре (PlayTime_Name.time)
+				Fs.save_string_from_data('PlayTime_'+GameDirs[i]+'.time','/'+G.AllGamesPath+'/'+ GameDirs[i],'0')
+			GamePanel.get_node(\"MainBlock/PlayTime\").text = 'Вы играли: '+MinuteToHours(int(Fs.load_data_as_text(MainPath + CurrentGameDirNew[2]))) #Если есть устанавливаем значение
+		
+			
+			#Добавляем игровую карточку в библеотку
+			$Panel/ScrollContainer/in.add_child(GamePanel)
+
+			#Если дебаг то проверяем всё
+			if Debug:
+				print('======')
+				print('GameExePath: '+GamePanel.GameExePath)
+				print('GamePath: '+GamePanel.GamePath)
+				print('version_path: '+GamePanel.version_path)
+				print('======')
+				
+#Функция очистки libraly
+func clear_libraly():
+	for _i in $Panel/ScrollContainer/in.get_children():
+		_i.queue_free()
+
+#Функция для добавления описания игры (Данные, путь)
+func add(node):
+	$AboutGameNode.add_child(node)
+
+#Кнопка обновить список
+func _on_UpdateLibraly_pressed():
+	clear_libraly()
+	load_libraly()
+
+#Функция перевода из минут в часы
+func MinuteToHours(minute: int):
+	var Hours = minute / 60
+	if Hours == 0:
+		return str(minute) + ' мин.'
+	else:
+		return str(round(Hours)) + ' ч.'
+
+#Фиксируем нажатия
+func _on_LauncherLibraly_gui_input(e):
+	if e is InputEventMouseButton:
+		if e.pressed:
+			if e.button_index == BUTTON_LEFT:
+				OffGameActivity()
+
+
+func _on_LauncherLibraly_mouse_entered():
+	OffGameActivity()
+
+
+func _on_Panel_mouse_entered():
+	OffGameActivity()
+
+func OffGameActivity():
+	if G.IsPlayerPlay:
+		OS.window_minimized = false
+		G.IsPlayerPlay = !G.IsPlayerPlay
+		print('Стоп игра')
+		print('G '+str(G.IsPlayerPlay))
+"
+
+[sub_resource type="Theme" id=1]
+GridContainer/constants/hseparation = 245
+GridContainer/constants/vseparation = 260
+HBoxContainer/constants/separation = 230
+VBoxContainer/constants/separation = 275
+
+[sub_resource type="DynamicFont" id=3]
+size = 9
+font_data = ExtResource( 3 )
+
+[node name="LauncherLibraly" type="Control"]
+pause_mode = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme = ExtResource( 2 )
+script = SubResource( 2 )
+
+[node name="Panel" type="Panel" parent="."]
+margin_left = 20.0
+margin_top = 143.0
+margin_right = 1255.0
+margin_bottom = 706.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel"]
+anchor_right = 0.211
+margin_left = 6.0
+margin_top = 14.0
+margin_right = 968.415
+margin_bottom = 533.0
+rect_min_size = Vector2( 760, 500 )
+size_flags_horizontal = 15
+size_flags_vertical = 15
+scroll_horizontal_enabled = false
+scroll_deadzone = 5
+
+[node name="in" type="GridContainer" parent="Panel/ScrollContainer"]
+margin_right = 1223.0
+margin_bottom = 519.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme = SubResource( 1 )
+columns = 5
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="GamePanelEnd" type="Control" parent="Panel/ScrollContainer/in"]
+visible = false
+
+[node name="MainBlock" type="Panel" parent="Panel/ScrollContainer/in/GamePanelEnd"]
+margin_left = 14.0
+margin_top = 11.0
+margin_right = 224.0
+margin_bottom = 251.0
+theme = ExtResource( 1 )
+
+[node name="IdCode" type="Label" parent="."]
+margin_left = 1240.0
+margin_top = 711.0
+margin_right = 1269.0
+margin_bottom = 723.0
+rect_rotation = -45.0
+custom_fonts/font = SubResource( 3 )
+text = "Games"
+align = 1
+
+[node name="AboutGameNode" type="Control" parent="."]
+margin_right = 1280.0
+margin_bottom = 720.0
+mouse_filter = 2
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="UpdateLibraly" type="LinkButton" parent="."]
+margin_left = 1093.0
+margin_top = 149.0
+margin_right = 1225.0
+margin_bottom = 169.0
+text = "Обновить список"
+underline = 2
+
+[connection signal="gui_input" from="." to="." method="_on_LauncherLibraly_gui_input"]
+[connection signal="mouse_entered" from="." to="." method="_on_LauncherLibraly_mouse_entered"]
+[connection signal="mouse_entered" from="Panel" to="." method="_on_Panel_mouse_entered"]
+[connection signal="pressed" from="UpdateLibraly" to="." method="_on_UpdateLibraly_pressed"]

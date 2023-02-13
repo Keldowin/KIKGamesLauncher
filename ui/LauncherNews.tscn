@@ -1,0 +1,459 @@
+[gd_scene load_steps=22 format=2]
+
+[ext_resource path="res://addons/native_dialogs/bin/native_dialog_message.gdns" type="Script" id=1]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=2]
+[ext_resource path="res://ui/font/VKSansDisplay-Regular.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://ui/font/VKSansDisplay-DemiBold.ttf" type="DynamicFontData" id=4]
+[ext_resource path="res://ui/shaders/InvertColor.tres" type="Shader" id=5]
+[ext_resource path="res://ui/font/Roboto-BoldItalic.ttf" type="DynamicFontData" id=6]
+[ext_resource path="res://ui/icons/file_48px.png" type="Texture" id=7]
+[ext_resource path="res://ui/font/Roboto-Italic.ttf" type="DynamicFontData" id=8]
+
+[sub_resource type="GDScript" id=10]
+script/source = "extends Control
+
+func _ready():
+	G.NewsScene = self
+	G.MainScene.SetBlockLable('Новости')
+	$MainPanel/NewsOpenPanel.hide()
+
+#Функция открытие окошка новости
+func OpenNews(Title,Text):
+	$MainPanel/NewsOpenPanel.show()
+	$MainPanel/NewsOpenPanel/OpenAnim.play(\"Open\")
+	$MainPanel/NewsOpenPanel/NewsTitle.text = Title
+	$MainPanel/NewsOpenPanel/NewsText.bbcode_text = Text
+	
+	
+"
+
+[sub_resource type="GDScript" id=13]
+script/source = "extends Panel
+
+func _ready():
+	var head = [\"User-Agent:Firefox/1.0\"]
+	var q = \"ApiGet=NewsAll\"
+	
+	$HTTPRequest.request(\"https://web1182.craft-host.ru/kikgames/kikgameslauncher/api.php?\"+q,head,false)
+
+
+
+var AllNewsData
+func _on_HTTPRequest_request_completed(result, response_code, headers, body):
+	if result == HTTPRequest.RESULT_SUCCESS:
+		if response_code == 200:
+			for _i in $ScrollContainer/in.get_children():
+				_i.queue_free()
+			#Получаем данные во временную переменную
+			var data = body.get_string_from_utf8()
+			to_json(data) #Переводим данные в json
+			var pars_json = JSON.parse(data) #Парсим json
+			if pars_json.error != OK: #Если есть какая то ошибка то пишем
+				print('ERROR')
+				return
+			var main_data = pars_json.result #Результат выводим во временную переменую
+				
+			#Данные из временной переменой заносим в основные переменные глобального скрипта
+			AllNewsData = main_data
+				
+			for i in int(AllNewsData.size()):
+				var NewsBox = preload(\"res://ui/Component/NewsPanel.tscn\").instance()
+		
+				#Переменные
+				var NewsTitle = AllNewsData[i]['NewsTitle']
+				var NewsDesc = AllNewsData[i]['NewsDesc']
+				var NewsText = AllNewsData[i]['NewsText']
+				var NewsData = AllNewsData[i]['NewsData']
+				var NewsTag = AllNewsData[i]['NewsTag']
+				var NewsId = AllNewsData[i]['Newsid']
+				var NewsPhoto = 'https://web1182.craft-host.ru/kikgames/'+AllNewsData[i]['NewsPhoto']
+		
+				#Все данные плашки новости
+				NewsBox.get_node(\"MainBlock/NewsTitle\").text = NewsTitle
+				NewsBox.get_node(\"MainBlock/DecorBlock2/NewsDesc\").text = NewsDesc
+				NewsBox.get_node(\"MainBlock/Photo\")._setTextureUrl(NewsPhoto)
+				NewsBox.get_node(\"MainBlock/DecorBlock/Date\").text = NewsData +' - '+NewsTag
+				NewsBox.get_node(\"MainBlock/DecorPanel/Code\").text = 'KIK_Games_News 1.0 :\\\\ News_'+NewsId
+				
+				#Переменные плашки
+				NewsBox.get_node(\"MainBlock\").NewsTitle = NewsTitle
+				NewsBox.get_node(\"MainBlock\").NewsText = NewsText
+				$ScrollContainer/in.add_child(NewsBox)
+			var UpdatePanel = preload(\"res://ui/Component/UnderPanelNews.tscn\").instance()
+			$ScrollContainer/in.add_child(UpdatePanel)
+	elif result == HTTPRequest.RESULT_CANT_CONNECT:
+		if response_code == 0:
+			if !G.NetWarning:
+				$NativeDialogMessage.show()
+				G.NetWarning = true
+				G.CallAlert('Ошибка загрузки новостей, проверьте подключение интернета и состояние сервера KIK Games (https://web1182.craft-host.ru/kikgames/)\\n\\n Лаунчер в оффлайн режиме, запуск игр можно произвести в разделе \"Библеотека\"',G.AppTitle,true)
+		
+			G.MainScene.loadcomplite = false	
+			G.MainScene.SetBlockLable('Новости \\\\ Ошибка загрузки :(')
+
+func _on_NativeDialogMessage_result_selected(result):
+	match result:
+		2:
+			OS.shell_open('https://web1182.craft-host.ru/kikgames/')
+			
+
+
+func _on_NewsText_meta_clicked(meta):
+	OS.shell_open(meta)
+
+
+func _on_UpdateLibraly_pressed():
+	$\"../UpdateNews\".disabled = true
+	for _i in $ScrollContainer/in.get_children():
+		_i.queue_free()
+	$\"../UpdateNews\".disabled = false
+	$NewsOpenPanel.hide()
+	_ready()
+"
+
+[sub_resource type="Theme" id=1]
+GridContainer/constants/hseparation = 465
+GridContainer/constants/vseparation = 260
+HBoxContainer/constants/separation = 230
+VBoxContainer/constants/separation = 275
+
+[sub_resource type="Animation" id=11]
+resource_name = "Open"
+length = 2.0
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:rect_size")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 0.0824693, 0.435275 ),
+"update": 0,
+"values": [ Vector2( 0, 506 ), Vector2( 697, 506 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("DecorBlock:rect_size")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 0.233, 1 ),
+"update": 0,
+"values": [ Vector2( 0, 2 ), Vector2( 696, 2 ) ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("NewsText:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/3/type = "value"
+tracks/3/path = NodePath("NewsTitle:visible")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"times": PoolRealArray( 0, 1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/4/type = "value"
+tracks/4/path = NodePath("DecorBlock2:visible")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"times": PoolRealArray( 0, 0.8 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/5/type = "value"
+tracks/5/path = NodePath("NewsTitle:percent_visible")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/keys = {
+"times": PoolRealArray( 0.9, 1.2 ),
+"transitions": PoolRealArray( 1, 0.784584 ),
+"update": 0,
+"values": [ 0.0, 1.0 ]
+}
+
+[sub_resource type="Animation" id=12]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:rect_size")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ Vector2( 697, 506 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("DecorBlock2/Icon:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ true ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("DecorBlock:rect_size")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ Vector2( 696, 2 ) ]
+}
+tracks/3/type = "value"
+tracks/3/path = NodePath("NewsText:visible")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ true ]
+}
+tracks/4/type = "value"
+tracks/4/path = NodePath("NewsTitle:visible")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ true ]
+}
+tracks/5/type = "value"
+tracks/5/path = NodePath("DecorBlock2:visible")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ true ]
+}
+tracks/6/type = "value"
+tracks/6/path = NodePath("NewsText:percent_visible")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ 1.0 ]
+}
+tracks/7/type = "value"
+tracks/7/path = NodePath("NewsTitle:percent_visible")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ 1.0 ]
+}
+
+[sub_resource type="ShaderMaterial" id=8]
+shader = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=9]
+size = 24
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="DynamicFont" id=14]
+size = 20
+use_filter = true
+font_data = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=17]
+use_filter = true
+font_data = ExtResource( 6 )
+
+[sub_resource type="DynamicFont" id=18]
+size = 14
+use_filter = true
+font_data = ExtResource( 8 )
+
+[sub_resource type="DynamicFont" id=15]
+size = 30
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="DynamicFont" id=16]
+size = 20
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="DynamicFont" id=3]
+size = 9
+font_data = ExtResource( 3 )
+
+[node name="LauncherNews" type="Control"]
+pause_mode = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme = ExtResource( 2 )
+script = SubResource( 10 )
+
+[node name="MainPanel" type="Panel" parent="."]
+margin_left = 20.0
+margin_top = 143.0
+margin_right = 1255.0
+margin_bottom = 706.0
+script = SubResource( 13 )
+
+[node name="HTTPRequest" type="HTTPRequest" parent="MainPanel"]
+timeout = 1.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MainPanel"]
+anchor_right = 0.211
+margin_left = 17.0
+margin_top = 33.0
+margin_right = 231.415
+margin_bottom = 533.0
+rect_min_size = Vector2( 450, 500 )
+size_flags_horizontal = 15
+size_flags_vertical = 15
+scroll_horizontal_enabled = false
+scroll_deadzone = 5
+
+[node name="in" type="VBoxContainer" parent="MainPanel/ScrollContainer"]
+margin_right = 475.0
+margin_bottom = 500.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme = SubResource( 1 )
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="NewsOpenPanel" type="Panel" parent="MainPanel"]
+margin_left = 508.0
+margin_top = 27.0
+margin_right = 1205.0
+margin_bottom = 533.0
+
+[node name="OpenAnim" type="AnimationPlayer" parent="MainPanel/NewsOpenPanel"]
+playback_speed = 1.2
+anims/Open = SubResource( 11 )
+anims/RESET = SubResource( 12 )
+
+[node name="DecorBlock" type="ColorRect" parent="MainPanel/NewsOpenPanel"]
+margin_top = 29.0
+margin_right = 696.0
+margin_bottom = 31.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="DecorBlock2" type="ColorRect" parent="MainPanel/NewsOpenPanel"]
+margin_left = 1.0
+margin_top = 1.0
+margin_right = 30.0
+margin_bottom = 30.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Icon" type="TextureRect" parent="MainPanel/NewsOpenPanel/DecorBlock2"]
+material = SubResource( 8 )
+margin_left = 4.0
+margin_top = 4.0
+margin_right = 24.0
+margin_bottom = 22.0
+texture = ExtResource( 7 )
+expand = true
+
+[node name="NewsTitle" type="Label" parent="MainPanel/NewsOpenPanel"]
+margin_left = 50.0
+margin_right = 696.0
+margin_bottom = 30.0
+custom_fonts/font = SubResource( 9 )
+text = "Заголовок новости может быть вот такой длинный"
+
+[node name="MarginContainer" type="MarginContainer" parent="MainPanel/NewsOpenPanel"]
+margin_top = 31.0
+margin_right = 696.0
+margin_bottom = 71.0
+
+[node name="NewsText" type="RichTextLabel" parent="MainPanel/NewsOpenPanel"]
+margin_left = 26.0
+margin_top = 43.0
+margin_right = 681.0
+margin_bottom = 456.0
+custom_fonts/mono_font = SubResource( 14 )
+custom_fonts/bold_italics_font = SubResource( 17 )
+custom_fonts/italics_font = SubResource( 18 )
+custom_fonts/bold_font = SubResource( 15 )
+custom_fonts/normal_font = SubResource( 16 )
+bbcode_enabled = true
+bbcode_text = "Новсти воалыфвыоадфоывафдывла 
+[color=#ff00ff][i]BIG[/i][/color]"
+text = "Новсти воалыфвыоадфоывафдывла 
+BIG"
+
+[node name="IdCode" type="Label" parent="."]
+margin_left = 1240.0
+margin_top = 712.0
+margin_right = 1269.0
+margin_bottom = 724.0
+rect_rotation = -45.0
+custom_fonts/font = SubResource( 3 )
+text = "News"
+align = 1
+
+[node name="UpdateNews" type="LinkButton" parent="."]
+margin_left = 60.0
+margin_top = 147.0
+margin_right = 192.0
+margin_bottom = 167.0
+text = "Обновить список"
+underline = 2
+
+[node name="NativeDialogMessage" type="Node" parent="."]
+script = ExtResource( 1 )
+title = "KIK Games"
+text = "Ошибка, нажмите \"Да\" чтобы зайти на сайт KIK Games, затем закройте его и обновите список новостей"
+choice = 2
+
+[connection signal="request_completed" from="MainPanel/HTTPRequest" to="MainPanel" method="_on_HTTPRequest_request_completed"]
+[connection signal="meta_clicked" from="MainPanel/NewsOpenPanel/NewsText" to="MainPanel" method="_on_NewsText_meta_clicked"]
+[connection signal="pressed" from="UpdateNews" to="MainPanel" method="_on_UpdateLibraly_pressed"]
+[connection signal="result_selected" from="NativeDialogMessage" to="MainPanel" method="_on_NativeDialogMessage_result_selected"]

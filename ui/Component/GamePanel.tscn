@@ -1,0 +1,205 @@
+[gd_scene load_steps=9 format=2]
+
+[ext_resource path="res://ui/Theme/ButtomTheme_LeftUpRightDown.tres" type="Theme" id=1]
+[ext_resource path="res://ui/Theme/CubePanel_RightLeft_Up.tres" type="Theme" id=2]
+[ext_resource path="res://ui/font/VKSansDisplay-DemiBold.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://ui/Theme/ButtomTheme_RightDown.tres" type="Theme" id=4]
+[ext_resource path="res://addons/native_dialogs/bin/native_dialog_message.gdns" type="Script" id=5]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=6]
+
+[sub_resource type="GDScript" id=4]
+script/source = "extends Control
+
+#Назначение кнопок и т.д
+
+var dir = Directory.new()
+
+export(String) var GameExePath = ''
+export(String) var GamePath = ''
+
+export(String) var version_path = ''
+
+export(Array) var GameArray
+export(String) var GameTitle = ''
+export(String) var GameExeTitle = ''
+
+#Скрипт записи сколько наиграл человек
+func StartRecordPlayTime():
+	StartTimer()
+	G.IsPlayerPlay = !G.IsPlayerPlay
+	print('Старт игра, считаем время')
+	print('G '+str(G.IsPlayerPlay))
+
+var timer
+func StartTimer():
+	print('Timer Start!')
+	timer = Timer.new()
+	timer.autostart = true
+	timer.wait_time = 60
+	add_child(timer)
+	timer.connect(\"timeout\", self, \"timerout\")
+
+
+func timerout():
+	CheakOnApp()
+	if G.IsPlayerPlay and active:
+		print('+1 минута!')
+		var AllTime = Fs.load_data_as_text(GamePath+'/'+'PlayTime_'+GameArray+'.time')
+		print(GamePath+'/'+'PlayTime_'+GameArray+'.time')
+		Fs.save_string_data(G.AllGamesPath+'/'+GameArray+'/'+'PlayTime_'+GameArray+'.time',str(int(AllTime) + 1))
+	else:
+		G.GameLibraly.OffGameActivity()
+		timer.queue_free()
+		G.GameLibraly.load_libraly()
+		print('Конец')
+
+var active = false #Активно ли приложение
+func CheakOnApp():
+	if OS.get_name() == \"Windows\": # Убеждаемся что это видновс
+		var output = []
+		# Выполните \"get-process\" в powershell и сохраните данные в \"output\":
+		print(\"get-process \"+GameExeTitle+\" | measure-object -line | select Lines -expandproperty Lines\")
+		OS.execute('powershell.exe', ['/C', \"get-process \"+GameExeTitle+\" | measure-object -line | select Lines -expandproperty Lines\"], true, output)
+		var result = output[0].to_int()
+		active = result > 0 # Если существует более 0 процессов chrome, это будет true
+		print_debug(\"Number of chrome processes: \" + str(result))
+	else:
+		G.CallAlert('Ваша OC не Windows! Подсчёт времени выключен')
+
+#Конец скрипта
+
+func _on_GameStart_pressed():
+	StartRecordPlayTime()
+	OS.window_minimized = !OS.window_minimized
+	OS.shell_open(GameExePath)
+
+func NativeDialog(title,text):
+	$NativeDialogMessage.title = title
+	$NativeDialogMessage.text = text
+	$NativeDialogMessage.show()
+
+func _on_GameDelet_pressed():
+	#Отправялем уведомление удалять ли игру
+	NativeDialog(G.AppTitle,'Вы точно хотите удалить '+ GameTitle + '?')
+
+
+func _on_NativeDialogMessage_result_selected(result):
+	match result:
+		2:
+			dir.remove(version_path)
+			dir.remove(GameExePath)
+			G.CallAlert('Игра успешно удалена!',G.AppTitle,true)
+			G.GameLibraly.load_libraly()
+			
+
+func _on_GameInfo_pressed():
+	#Скрываем элементы библеотеки (карточки игр)
+	G.GameLibraly.get_node('Panel/ScrollContainer/in').hide()
+	
+	#Загружаем ноду с описанием игры
+	var AboutAppNode = preload(\"res://ui/Component/AboutGamePanel.tscn\").instance()
+	var GamePath = OS.get_user_data_dir() + '/' + G.AllGamesPath + '/' + GameArray #Путь к папке игры
+	
+	#Устанавливаем значения
+	AboutAppNode.get_node(\"GamePath\").text = 'Путь к игре: '+GamePath #Устанавливаем текст путя игры
+	AboutAppNode.GamePath = GamePath #Заносим переменную пути в переменную пути ноды
+	
+	
+	#Считаем размер .exe игры
+	var f = File.new()
+	f.open(GameExePath, File.READ)
+	var size_in_bytes = str(f.get_len()).humanize_size(f.get_len()) #Получаем размер игры в байтах, переводим в строку и переводим в нормальное значение (Гб,Мб,Кб)
+	f.close()
+	
+	#Заносим данные
+	AboutAppNode.get_node(\"GameExeSize\").text = 'Размер игры: '+size_in_bytes
+	
+	AboutAppNode.get_node(\"GameVersion\").text = 'Версия: '+ Fs.load_data_as_text(version_path)
+	
+	AboutAppNode.get_node(\"BlockTitle/Label\").text = GameTitle #Устанавливаем название игры, раннее которое было форматировано самой библеотекой
+	#Добавление на сцену
+	G.GameLibraly.add(AboutAppNode)
+"
+
+[sub_resource type="DynamicFont" id=3]
+size = 22
+outline_size = 1
+outline_color = Color( 1, 1, 1, 0.156863 )
+use_filter = true
+font_data = ExtResource( 3 )
+
+[node name="GamePanel" type="Control"]
+size_flags_vertical = 9
+theme = ExtResource( 6 )
+script = SubResource( 4 )
+
+[node name="NativeDialogMessage" type="Node" parent="."]
+script = ExtResource( 5 )
+title = "Удалить игру?"
+choice = 2
+icon = 1
+
+[node name="MainBlock" type="Panel" parent="."]
+margin_left = 14.0
+margin_top = 11.0
+margin_right = 224.0
+margin_bottom = 251.0
+theme = ExtResource( 2 )
+
+[node name="GameTitle" type="Label" parent="MainBlock"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -93.0
+margin_top = 5.0
+margin_right = 93.0
+margin_bottom = 106.0
+custom_fonts/font = SubResource( 3 )
+text = "123456789010111213141516171819202122232425262728"
+align = 1
+valign = 1
+autowrap = true
+
+[node name="PlayTime" type="Label" parent="MainBlock"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -93.0
+margin_top = -6.0
+margin_right = 95.0
+margin_bottom = 23.0
+text = "Вы играли: 100 ч"
+align = 1
+valign = 1
+
+[node name="GameStart" type="Button" parent="MainBlock"]
+margin_left = 12.0
+margin_top = 143.0
+margin_right = 200.0
+margin_bottom = 192.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 4 )
+text = "Играть"
+
+[node name="GameDelet" type="Button" parent="MainBlock"]
+margin_left = 12.0
+margin_top = 199.0
+margin_right = 105.0
+margin_bottom = 227.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 1 )
+text = "Удалить"
+
+[node name="GameInfo" type="Button" parent="MainBlock"]
+margin_left = 113.0
+margin_top = 199.0
+margin_right = 198.0
+margin_bottom = 227.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 1 )
+text = "..."
+
+[connection signal="result_selected" from="NativeDialogMessage" to="." method="_on_NativeDialogMessage_result_selected"]
+[connection signal="pressed" from="MainBlock/GameStart" to="." method="_on_GameStart_pressed"]
+[connection signal="pressed" from="MainBlock/GameDelet" to="." method="_on_GameDelet_pressed"]
+[connection signal="pressed" from="MainBlock/GameInfo" to="." method="_on_GameInfo_pressed"]

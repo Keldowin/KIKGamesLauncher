@@ -1,0 +1,111 @@
+[gd_scene load_steps=11 format=2]
+
+[ext_resource path="res://ui/Theme/ButtomTheme_LeftUpRightDown.tres" type="Theme" id=1]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=2]
+[ext_resource path="res://ui/font/VKSansDisplay-DemiBold.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://ui/font/VKSansDisplay-Regular.ttf" type="DynamicFontData" id=4]
+[ext_resource path="res://addons/textureRectUrl/node_textureRectUrl.gd" type="Script" id=5]
+
+[sub_resource type="GDScript" id=10]
+script/source = "extends Panel
+
+export var SiteId = ''
+
+func _on_GamePanel_gui_input(e):
+	if e is InputEventMouseButton:
+		if e.pressed:
+			if e.button_index == BUTTON_LEFT:
+				G.GameIdTmp = SiteId
+				var GameScene = preload(\"res://ui/LauncherGameScene.tscn\").instance()
+				$\"../../../../../../\".add_child(GameScene)
+"
+
+[sub_resource type="DynamicFont" id=5]
+size = 32
+outline_size = 1
+outline_color = Color( 1, 1, 1, 0.156863 )
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="DynamicFont" id=9]
+size = 18
+outline_size = 1
+outline_color = Color( 1, 1, 1, 0.156863 )
+use_filter = true
+font_data = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=7]
+size = 32
+outline_size = 1
+outline_color = Color( 1, 1, 1, 0.156863 )
+font_data = ExtResource( 3 )
+
+[sub_resource type="GDScript" id=8]
+script/source = "extends Button
+
+export var SiteId = ''
+
+func _on_Open_pressed():
+	G.GameIdTmp = SiteId
+	var GameScene = preload(\"res://ui/LauncherGameScene.tscn\").instance()
+	$\"../../../../../../\".add_child(GameScene)
+	
+"
+
+[node name="GameBox" type="Control"]
+margin_right = 750.0
+margin_bottom = 135.0
+rect_min_size = Vector2( 750, 135 )
+theme = ExtResource( 2 )
+
+[node name="GamePanel" type="Panel" parent="."]
+margin_left = 20.0
+margin_top = 15.0
+margin_right = 1194.0
+margin_bottom = 157.0
+mouse_default_cursor_shape = 2
+script = SubResource( 10 )
+
+[node name="Photo" type="TextureRect" parent="GamePanel"]
+margin_left = 15.0
+margin_top = 10.0
+margin_right = 140.0
+margin_bottom = 130.0
+mouse_filter = 2
+expand = true
+script = ExtResource( 5 )
+preloadImage = false
+progressbar = false
+progressbarColor = Color( 1, 1, 1, 1 )
+
+[node name="GameTitle" type="Label" parent="GamePanel"]
+margin_left = 161.0
+margin_top = 15.0
+margin_right = 736.0
+margin_bottom = 55.0
+custom_fonts/font = SubResource( 5 )
+text = "Название игры"
+
+[node name="GameAbout" type="RichTextLabel" parent="GamePanel"]
+margin_left = 161.0
+margin_top = 55.0
+margin_right = 677.0
+margin_bottom = 130.0
+mouse_filter = 2
+custom_fonts/normal_font = SubResource( 9 )
+text = "описание"
+
+[node name="Open" type="Button" parent="GamePanel"]
+visible = false
+margin_left = 826.0
+margin_top = 40.0
+margin_right = 1133.0
+margin_bottom = 101.0
+mouse_filter = 2
+theme = ExtResource( 1 )
+custom_fonts/font = SubResource( 7 )
+text = "Играть"
+script = SubResource( 8 )
+
+[connection signal="gui_input" from="GamePanel" to="GamePanel" method="_on_GamePanel_gui_input"]
+[connection signal="pressed" from="GamePanel/Open" to="GamePanel/Open" method="_on_Open_pressed"]

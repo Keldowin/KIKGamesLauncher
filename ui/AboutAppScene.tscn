@@ -1,0 +1,99 @@
+[gd_scene load_steps=10 format=2]
+
+[ext_resource path="res://ui/Component/BackgroundScene.tscn" type="PackedScene" id=1]
+[ext_resource path="res://ui/font/VKSansDisplay-DemiBold.ttf" type="DynamicFontData" id=2]
+[ext_resource path="res://ui/img/KIK_logo.jpg" type="Texture" id=3]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=4]
+[ext_resource path="res://ui/img/Godot_logo.svg.png" type="Texture" id=5]
+[ext_resource path="res://ui/Theme/ButtomTheme_LeftUpRightDown.tres" type="Theme" id=6]
+[ext_resource path="res://ui/Component/LoadAnim.tscn" type="PackedScene" id=7]
+
+[sub_resource type="GDScript" id=2]
+script/source = "extends Control
+
+func _on_Exit_pressed():
+	get_tree().change_scene(\"res://ui/LauncherMainScene.tscn\")
+"
+
+[sub_resource type="DynamicFont" id=1]
+size = 32
+outline_size = 1
+outline_color = Color( 1, 1, 1, 0.156863 )
+font_data = ExtResource( 2 )
+
+[node name="AboutGame" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource( 4 )
+script = SubResource( 2 )
+
+[node name="BackGroundScene" parent="." instance=ExtResource( 1 )]
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Panel" type="Panel" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -600.0
+margin_top = -301.0
+margin_right = 600.0
+margin_bottom = 316.0
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Logo" type="TextureRect" parent="Panel"]
+margin_left = 22.0
+margin_top = 21.0
+margin_right = 278.0
+margin_bottom = 277.0
+texture = ExtResource( 3 )
+expand = true
+
+[node name="Title" type="Label" parent="Panel"]
+margin_left = 298.0
+margin_top = 21.0
+margin_right = 662.0
+margin_bottom = 61.0
+custom_fonts/font = SubResource( 1 )
+text = "KIK Games Launcher 1.0"
+valign = 1
+
+[node name="About" type="Label" parent="Panel"]
+margin_left = 298.0
+margin_top = 71.0
+margin_right = 662.0
+margin_bottom = 277.0
+text = "Лаунчер KIK Games Launcher, создан с помощью Godot Engine 3.5.stable
+
+KRIptoUI 2.0
+KIK Games API 1.0"
+autowrap = true
+
+[node name="GodotLogosvg" type="TextureRect" parent="Panel"]
+margin_left = 22.0
+margin_top = 277.0
+margin_right = 278.0
+margin_bottom = 376.0
+texture = ExtResource( 5 )
+expand = true
+
+[node name="Exit" type="Button" parent="Panel"]
+margin_left = 22.0
+margin_top = 545.0
+margin_right = 278.0
+margin_bottom = 598.0
+theme = ExtResource( 6 )
+text = "Выйти"
+
+[node name="LoadAnim" parent="." instance=ExtResource( 7 )]
+margin_left = 1196.0
+margin_top = 636.0
+margin_right = 1228.0
+margin_bottom = 668.0
+rect_rotation = 360.0
+
+[connection signal="pressed" from="Panel/Exit" to="." method="_on_Exit_pressed"]

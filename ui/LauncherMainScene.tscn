@@ -1,0 +1,226 @@
+[gd_scene load_steps=14 format=2]
+
+[ext_resource path="res://ui/Theme/buttom_area.tres" type="Theme" id=1]
+[ext_resource path="res://ui/Theme/CubePanel_LeftRight.tres" type="Theme" id=2]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=3]
+[ext_resource path="res://ui/font/VKSansDisplay-Regular.ttf" type="DynamicFontData" id=4]
+[ext_resource path="res://ui/shaders/InvertColor.tres" type="Shader" id=5]
+[ext_resource path="res://ui/font/VKSansDisplay-DemiBold.ttf" type="DynamicFontData" id=6]
+[ext_resource path="res://ui/Component/BackgroundScene.tscn" type="PackedScene" id=7]
+
+[sub_resource type="GDScript" id=8]
+script/source = "extends Control
+
+var BlockTitle = 'Магазин KIK Games' #Текст в блоке $\"../BlockTitle/Title\"
+onready var BlockTitleNode = $BlockTitle/Title
+
+var loadcomplite = false
+
+func _ready():
+	var GameNode = preload(\"res://ui/LauncherGamesShop.tscn\").instance()
+	$SceneNode.add_child(GameNode)
+	
+	var textsize = BlockTitleNode.get_size()
+	G.MainScene = self #Устанавливаем значение
+	loadcomplite = false # Переменная загружен ли список игры
+	
+	SetBlockLable()
+	
+func CheckShopLoad():
+#	#Загружаем библеотку LauncherLibraly
+	if loadcomplite:
+		$Load.hide()
+	else:
+		$Load.text = 'Ошибка загрузки магазина'	
+
+#Функция изменения title блока
+func SetBlockLable(text=BlockTitle):
+	BlockTitleNode.text = text #Устанавливаем текст
+	yield(get_tree().create_timer(0.005), \"timeout\") #Задержка на выполнение
+	#Проверка если текст больше стандартного значения размера текста то изменяем
+	if(BlockTitleNode.get_size() > Vector2(210,17)):
+		$BlockTitle.set_size(BlockTitleNode.get_size()+Vector2(15,0)) #Устанавливаем размер блока
+	else:
+		$BlockTitle.set_size(Vector2(210,17))
+"
+
+[sub_resource type="ShaderMaterial" id=12]
+shader = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=13]
+size = 12
+use_filter = true
+font_data = ExtResource( 4 )
+
+[sub_resource type="GDScript" id=11]
+script/source = "extends Panel
+
+
+func _on_LibralyBth_pressed():
+	var GameNode = preload(\"res://ui/LauncherLibraly.tscn\").instance()
+	add(GameNode)
+
+func _on_ShopBth_pressed():
+	var GameNode = preload(\"res://ui/LauncherGamesShop.tscn\").instance()
+	add(GameNode)
+	G.MainScene.SetBlockLable()
+	G.MainScene.loadcomplite = false
+
+func add(node):
+	for _i in $\"../SceneNode\".get_children():
+		_i.queue_free()
+
+	$\"../SceneNode\".add_child(node)
+	$\"../Load\".hide()
+
+func _on_NewsBth_pressed():
+	var GameNode = preload(\"res://ui/LauncherNews.tscn\").instance()
+	add(GameNode)
+"
+
+[sub_resource type="DynamicFont" id=1]
+size = 46
+outline_size = 1
+outline_color = Color( 1, 1, 1, 0.156863 )
+use_filter = true
+font_data = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=9]
+size = 32
+use_filter = true
+font_data = ExtResource( 6 )
+
+[node name="MainMenu" type="Node"]
+
+[node name="UI" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource( 3 )
+script = SubResource( 8 )
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": true
+}
+
+[node name="BackGroundScene" parent="UI" instance=ExtResource( 7 )]
+
+[node name="BlockTitle" type="ColorRect" parent="UI"]
+margin_left = 20.0
+margin_top = 126.0
+margin_right = 236.0
+margin_bottom = 144.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Title" type="Label" parent="UI/BlockTitle"]
+material = SubResource( 12 )
+margin_left = 5.0
+margin_right = 215.0
+margin_bottom = 17.0
+custom_fonts/font = SubResource( 13 )
+text = "Title"
+valign = 1
+
+[node name="BlockTitleRight" type="ColorRect" parent="UI"]
+margin_left = 1254.0
+margin_top = 143.0
+margin_right = 1260.0
+margin_bottom = 264.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Panel" type="Panel" parent="UI"]
+margin_left = 20.0
+margin_top = 54.0
+margin_right = 1255.0
+margin_bottom = 117.0
+theme = ExtResource( 2 )
+script = SubResource( 11 )
+
+[node name="MenuHBox" type="HBoxContainer" parent="UI/Panel"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -617.0
+margin_top = -31.5
+margin_right = 617.0
+margin_bottom = 31.5
+mouse_filter = 2
+custom_constants/separation = 40
+alignment = 1
+
+[node name="ShopBth" type="LinkButton" parent="UI/Panel/MenuHBox"]
+margin_left = 261.0
+margin_right = 445.0
+margin_bottom = 63.0
+focus_mode = 1
+theme = ExtResource( 1 )
+custom_fonts/font = SubResource( 1 )
+enabled_focus_mode = 1
+text = "Магазин"
+underline = 2
+
+[node name="NewsBth" type="LinkButton" parent="UI/Panel/MenuHBox"]
+margin_left = 485.0
+margin_right = 673.0
+margin_bottom = 63.0
+focus_mode = 1
+theme = ExtResource( 1 )
+custom_fonts/font = SubResource( 1 )
+enabled_focus_mode = 1
+text = "Новости"
+underline = 2
+
+[node name="UpdateBth" type="LinkButton" parent="UI/Panel/MenuHBox"]
+visible = false
+margin_left = 557.0
+margin_right = 829.0
+margin_bottom = 63.0
+focus_mode = 1
+theme = ExtResource( 1 )
+custom_fonts/font = SubResource( 1 )
+enabled_focus_mode = 1
+text = "Обновления"
+underline = 2
+
+[node name="LibralyBth" type="LinkButton" parent="UI/Panel/MenuHBox"]
+margin_left = 713.0
+margin_right = 972.0
+margin_bottom = 63.0
+focus_mode = 1
+theme = ExtResource( 1 )
+custom_fonts/font = SubResource( 1 )
+enabled_focus_mode = 1
+text = "Библиотека"
+underline = 2
+
+[node name="SceneNode" type="Control" parent="UI"]
+margin_right = 40.0
+margin_bottom = 40.0
+
+[node name="Load" type="Label" parent="UI"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -225.5
+margin_top = -20.0
+margin_right = 225.5
+margin_bottom = 20.0
+custom_fonts/font = SubResource( 9 )
+text = "Загрузка магазина игр"
+align = 1
+valign = 1
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="Panel2" type="Panel" parent="UI"]
+visible = false
+margin_left = 20.0
+margin_top = 143.0
+margin_right = 1255.0
+margin_bottom = 702.0
+
+[connection signal="pressed" from="UI/Panel/MenuHBox/ShopBth" to="UI/Panel" method="_on_ShopBth_pressed"]
+[connection signal="pressed" from="UI/Panel/MenuHBox/NewsBth" to="UI/Panel" method="_on_NewsBth_pressed"]
+[connection signal="pressed" from="UI/Panel/MenuHBox/LibralyBth" to="UI/Panel" method="_on_LibralyBth_pressed"]

@@ -1,0 +1,479 @@
+[gd_scene load_steps=20 format=2]
+
+[ext_resource path="res://ui/Component/BackgroundScene.tscn" type="PackedScene" id=1]
+[ext_resource path="res://ui/Theme/MenuUI.tres" type="Theme" id=2]
+[ext_resource path="res://ui/font/VKSansDisplay-Regular.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://ui/shaders/InvertColor.tres" type="Shader" id=4]
+[ext_resource path="res://ui/icons/settings_48px.png" type="Texture" id=5]
+[ext_resource path="res://ui/Theme/ButtomTheme_RightDown.tres" type="Theme" id=6]
+[ext_resource path="res://ui/icons/color_dropper_48px.png" type="Texture" id=7]
+
+[sub_resource type="GDScript" id=7]
+script/source = "extends Control
+
+
+onready var ColorGradientNode = $Panel/LaucnherSettingPanel/VBoxContainer/SettingColorGradient/ColorGradient
+var ColorGradient = Color(\"#27ae60\")
+
+onready var ColorBackgroundNode = $Panel/LaucnherSettingPanel/VBoxContainer/SettingColorBackground/ColorBackground
+var ColorBackgroud = Color(\"#363535\")
+
+onready var UsePersonalColorNode = $Panel/LaucnherSettingPanel/VBoxContainer/SettingUsePresonalColor/CheckBox
+var UsePersonalColor = false
+
+onready var UseAlertsNode = $Panel/LaucnherSettingPanel2/VBoxContainer/SettingUseAlerts/CheckBox2
+var UseAlerts = true
+
+func Save_settings():
+	$LoadAlert/Load.play(\"Load\")
+	Fs.save_store_data(G.SaveInterface, {
+		'ColorGradient' : Color(ColorGradient),
+		'ColorBackground' : Color(ColorBackgroud),
+		'UsePersonalColor': UsePersonalColor,
+	})
+	Fs.save_store_data(G.SaveLauncher, {
+		'UseAlerts': UseAlerts
+	})
+	G.SettingsDataInterface = Fs.load_data(G.SaveInterface)
+	G.SettingsDataLauncher = Fs.load_data(G.SaveLauncher)
+
+func New_settings():
+	Fs.CreateNewInterfaceSettings()
+	
+	#Настройки персонализации
+	G.SettingsDataInterface = Fs.load_data(G.SaveInterface)
+	#Настройки лаунчера
+	G.SettingsDataLauncher = Fs.load_data(G.SaveLauncher)
+	
+	RegisterPropertis()
+	
+	#Настройки лаунчера
+	
+func _ready():
+	#Подгрузка всех изменений
+	if G.SettingsDataInterface:
+		RegisterPropertis()
+	else:
+		New_settings()
+	#Дргуие функции	
+
+func RegisterPropertis():
+	#Настройки персонализации
+	ColorGradientNode.color = G.SettingsDataInterface['ColorGradient']
+	ColorGradient = G.SettingsDataInterface['ColorGradient']
+	
+	ColorBackgroundNode.color = G.SettingsDataInterface['ColorBackground']
+	ColorBackgroud = G.SettingsDataInterface['ColorBackground']
+	
+	UsePersonalColorNode.pressed = G.SettingsDataInterface['UsePersonalColor']
+	
+	#Настройки лаунчера
+	UseAlertsNode.pressed = G.SettingsDataLauncher['UseAlerts']
+
+func _on_ColorGradient_color_changed(color):
+	ColorGradient = color
+	G.BackGroundScene.ChangeGradient(ColorGradient.to_html())
+
+func _on_ColorBackground_color_changed(color):
+	ColorBackgroud = color
+	G.BackGroundScene.ChangeBackground(ColorBackgroud.to_html())
+
+func _on_CheckBox_toggled(button_pressed):
+	UsePersonalColor = button_pressed
+
+
+func _on_CheckBox2_toggled(button_pressed):
+	UseAlerts = button_pressed
+
+#Сохранение настроек
+func _on_SaveButton_pressed():
+	Save_settings()
+
+func _on_ExitButton_pressed():
+	get_tree().change_scene(\"res://ui/LauncherMainScene.tscn\")
+
+func _on_ResetSettings_pressed():
+	New_settings()
+
+
+"
+
+[sub_resource type="ShaderMaterial" id=1]
+shader = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=2]
+size = 40
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="ShaderMaterial" id=9]
+shader = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=10]
+size = 8
+font_data = ExtResource( 3 )
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=3]
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="DynamicFont" id=6]
+size = 8
+font_data = ExtResource( 3 )
+
+[sub_resource type="ShaderMaterial" id=11]
+shader = ExtResource( 4 )
+
+[sub_resource type="DynamicFont" id=8]
+size = 20
+font_data = ExtResource( 3 )
+
+[sub_resource type="Animation" id=12]
+resource_name = "Load"
+length = 3.0
+tracks/0/type = "bezier"
+tracks/0/path = NodePath(".:percent_visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0, 1, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0, 0.7 )
+}
+tracks/1/type = "method"
+tracks/1/path = NodePath(".")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 1, 1.4, 1.9, 2.4, 2.9 ),
+"transitions": PoolRealArray( 1, 1, 1, 1, 1, 1 ),
+"values": [ {
+"args": [  ],
+"method": "show"
+}, {
+"args": [  ],
+"method": "hide"
+}, {
+"args": [  ],
+"method": "show"
+}, {
+"args": [  ],
+"method": "hide"
+}, {
+"args": [  ],
+"method": "show"
+}, {
+"args": [  ],
+"method": "hide"
+} ]
+}
+
+[sub_resource type="Animation" id=13]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/path = NodePath(".:percent_visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+
+[node name="SettingsScene" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource( 2 )
+script = SubResource( 7 )
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="BackGroundScene" parent="." instance=ExtResource( 1 )]
+
+[node name="Panel" type="Panel" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -600.0
+margin_top = -301.0
+margin_right = 600.0
+margin_bottom = 316.0
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="BlockTitle2" type="ColorRect" parent="Panel"]
+margin_left = 1074.0
+margin_top = -5.0
+margin_right = 1200.0
+margin_bottom = 1.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="BlockTitle" type="ColorRect" parent="Panel"]
+margin_right = 485.0
+margin_bottom = 75.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Title" type="Label" parent="Panel/BlockTitle"]
+material = SubResource( 1 )
+margin_left = 15.0
+margin_right = 485.0
+margin_bottom = 75.0
+custom_fonts/font = SubResource( 2 )
+text = "Настройки лаунчера"
+valign = 1
+
+[node name="Code" type="Label" parent="Panel/BlockTitle"]
+visible = false
+material = SubResource( 9 )
+margin_left = 444.0
+margin_top = 61.0
+margin_right = 484.0
+margin_bottom = 75.0
+custom_fonts/font = SubResource( 10 )
+text = "\\\\Settings"
+align = 1
+valign = 1
+
+[node name="LaucnherSettingPanel" type="Panel" parent="Panel"]
+margin_left = 15.0
+margin_top = 89.0
+margin_right = 450.0
+margin_bottom = 596.0
+
+[node name="BlockTitle" type="ColorRect" parent="Panel/LaucnherSettingPanel"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -217.5
+margin_right = 217.5
+margin_bottom = 22.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Title" type="Label" parent="Panel/LaucnherSettingPanel/BlockTitle"]
+material = SubResource( 4 )
+margin_right = 435.0
+margin_bottom = 22.0
+custom_fonts/font = SubResource( 3 )
+text = "Настройки персонализации лаунчера"
+align = 1
+valign = 1
+
+[node name="MiniCode" type="Label" parent="Panel/LaucnherSettingPanel/BlockTitle"]
+margin_left = 346.0
+margin_top = 491.0
+margin_right = 423.0
+margin_bottom = 501.0
+custom_fonts/font = SubResource( 6 )
+text = "SettingsInterface.txt"
+align = 2
+
+[node name="Pack" type="TextureRect" parent="Panel/LaucnherSettingPanel/BlockTitle"]
+material = SubResource( 11 )
+margin_left = 2.0
+margin_top = 1.0
+margin_right = 23.0
+margin_bottom = 21.0
+texture = ExtResource( 7 )
+expand = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/LaucnherSettingPanel"]
+margin_left = 9.0
+margin_top = 35.0
+margin_right = 540.0
+margin_bottom = 491.0
+custom_constants/separation = 50
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="SettingColorGradient" type="Control" parent="Panel/LaucnherSettingPanel/VBoxContainer"]
+margin_right = 531.0
+
+[node name="ColorGradient" type="ColorPickerButton" parent="Panel/LaucnherSettingPanel/VBoxContainer/SettingColorGradient"]
+margin_left = 10.0
+margin_top = 4.0
+margin_right = 66.0
+margin_bottom = 28.0
+color = Color( 0.152941, 0.682353, 0.376471, 1 )
+edit_alpha = false
+
+[node name="Label" type="Label" parent="Panel/LaucnherSettingPanel/VBoxContainer/SettingColorGradient/ColorGradient"]
+margin_left = 72.0
+margin_right = 515.0
+margin_bottom = 26.0
+text = "Цвет градиента фона"
+valign = 1
+
+[node name="SettingColorBackground" type="Control" parent="Panel/LaucnherSettingPanel/VBoxContainer"]
+margin_top = 50.0
+margin_right = 531.0
+margin_bottom = 50.0
+
+[node name="ColorBackground" type="ColorPickerButton" parent="Panel/LaucnherSettingPanel/VBoxContainer/SettingColorBackground"]
+margin_left = 10.0
+margin_top = 4.0
+margin_right = 66.0
+margin_bottom = 28.0
+color = Color( 0.211765, 0.207843, 0.207843, 1 )
+edit_alpha = false
+
+[node name="Label" type="Label" parent="Panel/LaucnherSettingPanel/VBoxContainer/SettingColorBackground/ColorBackground"]
+margin_left = 72.0
+margin_right = 515.0
+margin_bottom = 26.0
+text = "Цвет фона"
+valign = 1
+
+[node name="SettingUsePresonalColor" type="Control" parent="Panel/LaucnherSettingPanel/VBoxContainer"]
+margin_top = 100.0
+margin_right = 531.0
+margin_bottom = 100.0
+
+[node name="CheckBox" type="CheckBox" parent="Panel/LaucnherSettingPanel/VBoxContainer/SettingUsePresonalColor"]
+margin_left = 28.0
+margin_right = 48.0
+margin_bottom = 24.0
+mouse_default_cursor_shape = 2
+
+[node name="Label" type="Label" parent="Panel/LaucnherSettingPanel/VBoxContainer/SettingUsePresonalColor/CheckBox"]
+margin_left = 54.0
+margin_right = 497.0
+margin_bottom = 26.0
+text = "Не изменять фон на страницах игр"
+valign = 1
+
+[node name="LaucnherSettingPanel2" type="Panel" parent="Panel"]
+margin_left = 743.0
+margin_top = 89.0
+margin_right = 1178.0
+margin_bottom = 596.0
+
+[node name="BlockTitle2" type="ColorRect" parent="Panel/LaucnherSettingPanel2"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -217.5
+margin_top = 1.0
+margin_right = 217.5
+margin_bottom = 23.0
+color = Color( 0.784314, 0.784314, 0.784314, 1 )
+
+[node name="Title" type="Label" parent="Panel/LaucnherSettingPanel2/BlockTitle2"]
+material = SubResource( 4 )
+margin_right = 435.0
+margin_bottom = 22.0
+custom_fonts/font = SubResource( 3 )
+text = "Настройки работы лаунчера"
+align = 1
+valign = 1
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="MiniCode" type="Label" parent="Panel/LaucnherSettingPanel2/BlockTitle2"]
+margin_left = 349.0
+margin_top = 490.0
+margin_right = 426.0
+margin_bottom = 500.0
+custom_fonts/font = SubResource( 6 )
+text = "SettingsLauncher.txt"
+align = 2
+
+[node name="Pack" type="TextureRect" parent="Panel/LaucnherSettingPanel2/BlockTitle2"]
+material = SubResource( 11 )
+margin_left = 2.0
+margin_top = 1.0
+margin_right = 23.0
+margin_bottom = 21.0
+texture = ExtResource( 5 )
+expand = true
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/LaucnherSettingPanel2"]
+margin_left = 9.0
+margin_top = 35.0
+margin_right = 540.0
+margin_bottom = 491.0
+custom_constants/separation = 50
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="SettingUseAlerts" type="Control" parent="Panel/LaucnherSettingPanel2/VBoxContainer"]
+margin_right = 531.0
+
+[node name="CheckBox2" type="CheckBox" parent="Panel/LaucnherSettingPanel2/VBoxContainer/SettingUseAlerts"]
+margin_left = 28.0
+margin_right = 48.0
+margin_bottom = 24.0
+mouse_default_cursor_shape = 2
+
+[node name="Label" type="Label" parent="Panel/LaucnherSettingPanel2/VBoxContainer/SettingUseAlerts/CheckBox2"]
+margin_left = 54.0
+margin_right = 383.0
+margin_bottom = 43.0
+text = "Использовать уведомления (Важные уведомления убираться не будут)"
+valign = 1
+autowrap = true
+
+[node name="SaveButton" type="Button" parent="Panel"]
+margin_left = 484.0
+margin_top = 372.0
+margin_right = 708.0
+margin_bottom = 437.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 6 )
+custom_fonts/font = SubResource( 8 )
+text = "Сохранить изменения"
+
+[node name="ResetSettings" type="Button" parent="Panel"]
+margin_left = 484.0
+margin_top = 450.0
+margin_right = 708.0
+margin_bottom = 515.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 6 )
+custom_fonts/font = SubResource( 8 )
+text = "Сбросить настройки"
+
+[node name="ExitButton" type="Button" parent="Panel"]
+margin_left = 484.0
+margin_top = 527.0
+margin_right = 708.0
+margin_bottom = 592.0
+mouse_default_cursor_shape = 2
+theme = ExtResource( 6 )
+custom_fonts/font = SubResource( 8 )
+text = "Выйти"
+
+[node name="LoadAlert" type="Label" parent="."]
+margin_left = 525.0
+margin_top = 360.0
+margin_right = 748.0
+margin_bottom = 411.0
+text = "Настройки сохранены"
+align = 1
+valign = 1
+percent_visible = 0.0
+
+[node name="Load" type="AnimationPlayer" parent="LoadAlert"]
+anims/Load = SubResource( 12 )
+anims/RESET = SubResource( 13 )
+
+[connection signal="color_changed" from="Panel/LaucnherSettingPanel/VBoxContainer/SettingColorGradient/ColorGradient" to="." method="_on_ColorGradient_color_changed"]
+[connection signal="color_changed" from="Panel/LaucnherSettingPanel/VBoxContainer/SettingColorBackground/ColorBackground" to="." method="_on_ColorBackground_color_changed"]
+[connection signal="toggled" from="Panel/LaucnherSettingPanel/VBoxContainer/SettingUsePresonalColor/CheckBox" to="." method="_on_CheckBox_toggled"]
+[connection signal="toggled" from="Panel/LaucnherSettingPanel2/VBoxContainer/SettingUseAlerts/CheckBox2" to="." method="_on_CheckBox2_toggled"]
+[connection signal="pressed" from="Panel/SaveButton" to="." method="_on_SaveButton_pressed"]
+[connection signal="pressed" from="Panel/ResetSettings" to="." method="_on_ResetSettings_pressed"]
+[connection signal="pressed" from="Panel/ExitButton" to="." method="_on_ExitButton_pressed"]
