@@ -11,14 +11,17 @@ A launcher for downloading, updating and previewing game pages. Made entirely in
 
 ### Images
 **Main menu**
+
 ![Main menu](previewimg/image2.jpg)
 
 ---
 
 **Game page**
+
 ![Game page](previewimg/image1.jpg)
 
 ---
 
 **Setting menu**
+
 ![Setting menu](previewimg/image3.jpg)
