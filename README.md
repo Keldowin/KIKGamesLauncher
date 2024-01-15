@@ -10,14 +10,15 @@ A launcher for downloading, updating and previewing game pages. Made entirely in
 - News
 
 ### Images
+**Main menu**
 ![Main menu](previewimg/image2.jpg)
 
-`Main menu`
+---
 
+**Game page**
 ![Game page](previewimg/image1.jpg)
 
-`Game page`
+---
 
+**Setting menu**
 ![Setting menu](previewimg/image3.jpg)
-
-`Setting menu`
